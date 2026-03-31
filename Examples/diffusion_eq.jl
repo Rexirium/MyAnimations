@@ -1,6 +1,8 @@
 using GLMakie
-
-include("../src/PDE_Solver/convection_diffusion.jl")
+if !isdefined(Main, :PDESolver)
+    include("../src/PDE_Solver/PDESolver.jl")
+    using .PDESolver
+end
 
 let 
     xa, xb = -1.0, 1.0

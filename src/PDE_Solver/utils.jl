@@ -1,6 +1,3 @@
-using MKL
-using LinearAlgebra
-
 abstract type AbstractProblem end
 abstract type AbstractCondition end
 

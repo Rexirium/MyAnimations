@@ -1,5 +1,3 @@
-include("utils.jl")
-
 mutable struct StaticSchrodingerProblem{T <: Real} <: AbstractProblem
     mass::Number
     potential::Fct

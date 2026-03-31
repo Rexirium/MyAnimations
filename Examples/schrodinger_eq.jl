@@ -1,7 +1,9 @@
 using Revise
 using GLMakie
-
-include("../src/PDE_Solver/schrodinger.jl")
+if !isdefined(Main, :PDESolver)
+    include("../src/PDE_Solver/PDESolver.jl")
+    using .PDESolver
+end
 
 let 
     m = 1.0

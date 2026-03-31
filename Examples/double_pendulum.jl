@@ -1,6 +1,9 @@
 using Revise
 using GLMakie
-include("../src/ODE_Solver/runge_kutta.jl")
+if !isdefined(Main, :ODESolver)
+    include("../src/ODE_Solver/ODESolver.jl")
+    using .ODESolver
+end
 
 let
     g = 9.8

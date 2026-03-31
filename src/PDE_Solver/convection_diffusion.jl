@@ -1,5 +1,3 @@
-include("utils.jl")
-
 mutable struct ConvectionProblem{C<:Union{Fct, Real}, T<:Real} <: AbstractProblem
     velocity::C
     initial::Fct
