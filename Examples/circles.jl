@@ -1,28 +1,74 @@
 using LinearAlgebra
-using CairoMakie
+using GLMakie
 
 let 
-    R, r = 2.0, 0.5
+    R, r = 4, 3
     Ω = 1.0
     ω = (R - r) / r * Ω
+    k = lcm(R - r, r)
     T = 2π / Ω
-    tf = 4T
+    tf = k * T
 
     nsteps = 1000
     time_len = 20
     fps = 25
 
-    ts = range(0, tf, nsteps+1)
+    ts = range(0.0, tf, nsteps + 1)
 
-    xs = (R - r) * cos.(Ω .* ts) + r * cos.(ω .* ts)
-    ys = (R - r) * sin.(Ω .* ts) - r * sin.(ω .* ts)
+    xs = (R - r) * cos.(Ω * ts) + r * cos.(ω * ts)
+    ys = (R - r) * sin.(Ω * ts) - r * sin.(ω * ts)
 
-    xc = (R - r) * cos.(Ω .* ts)
-    yc = (R - r) * sin.(Ω .* ts)
+    vx = - (R - r) * Ω * sin.(Ω * ts) - r * ω * sin.(ω * ts)
+    vy = (R - r) * Ω * cos.(Ω * ts) - r * ω * cos.(ω * ts)
+
+    xc = (R - r) * cos.(Ω * ts)
+    yc = (R - r) * sin.(Ω * ts)
 
     nframes = fps * time_len
     spf = nsteps ÷ nframes
 
-    set_theme!()
+    set_theme!(Axis=(
+        titlesize=20, 
+        xtickalign=1, ytickalign=1,
+    ))
+    idx = Observable(1)
+
+    θ0 = π/6 : π/6 : 2π
+    
+    trajectory = @lift(Point2f.(xs[1 : $idx], ys[1 : $idx]))
+    center_loc = @lift(Point2f(xc[$idx], yc[$idx]))
+    radius = @lift(Point2f[(xc[$idx], yc[$idx]), (xs[$idx], ys[$idx])])
+    point_loc = @lift(Point2f(xs[$idx], ys[$idx]))
+    velocity_vec = @lift(Point2f(0.5 * vx[$idx], 0.5 * vy[$idx]))
+    dotlist = @lift begin
+        list = Point2f[]
+        for θ in θ0
+            θs = ω * ts[$idx] + θ
+            push!(list, Point2f(xc[$idx] + r * cos(θs), yc[$idx] - r * sin(θs)))
+        end
+        list
+    end
+
+    fig = Figure()
+    ax = Axis(fig[1, 1], 
+        title="Hypotrochoid", 
+        xlabel="x", ylabel="y",
+        aspect=DataAspect()
+    )
+    arc!(ax, Point2f(0, 0), R, 0, 2π, linewidth=3, color=:black)
+    arc!(ax, Point2f(0, 0), R - r, 0, 2π, linewidth=1, color=:gray, linestyle=:dash)
+
+    arc!(ax, center_loc, r, 0, 2π, linewidth=2, color=:blue)
+    lines!(ax, trajectory, color=:purple, linewidth=1.5)
+    lines!(ax, radius, color=:black, linewidth=1)
+    scatter!(ax, center_loc, color=:blue, markersize=12)
+    scatter!(ax, dotlist, color=:blue, markersize=12)
+    scatter!(ax, point_loc, color=:red, markersize=16)
+    arrows2d!(ax, point_loc, velocity_vec, color=:green)
+
+    new_traj = Vector{Point2f}(undef, spf)
+    record(fig, "Examples/videos/hypotrochoid.mp4", 0:nframes; framerate=fps) do i
+        idx[] = min(i * spf + 1, nsteps + 1)
+    end
 
 end
