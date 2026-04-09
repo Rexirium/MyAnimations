@@ -2,27 +2,27 @@ using LinearAlgebra
 using GLMakie
 
 let 
-    R, r = 4, 3
+    R, r = 2, 1
     Ω = 1.0
     ω = (R - r) / r * Ω
-    k = lcm(R - r, r)
+    k = gcd(R - r, r)
     T = 2π / Ω
-    tf = k * T
+    tf = (R - r) / k * T
 
     nsteps = 1000
-    time_len = 20
+    time_len = 10
     fps = 25
 
     ts = range(0.0, tf, nsteps + 1)
 
-    xs = (R - r) * cos.(Ω * ts) + r * cos.(ω * ts)
-    ys = (R - r) * sin.(Ω * ts) - r * sin.(ω * ts)
+    xc = (R - r) * cos.(Ω * ts)
+    yc = (R - r) * sin.(Ω * ts)
+    
+    xs = xc + r * cos.(ω * ts)
+    ys = yc - r * sin.(ω * ts)
 
     vx = - (R - r) * Ω * sin.(Ω * ts) - r * ω * sin.(ω * ts)
     vy = (R - r) * Ω * cos.(Ω * ts) - r * ω * cos.(ω * ts)
-
-    xc = (R - r) * cos.(Ω * ts)
-    yc = (R - r) * sin.(Ω * ts)
 
     nframes = fps * time_len
     spf = nsteps ÷ nframes

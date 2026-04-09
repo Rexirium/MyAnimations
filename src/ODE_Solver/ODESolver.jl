@@ -19,33 +19,63 @@ function quasi_newton(func::Function, xini::Tuple{T, T}; tol=1e-14, xtol=1e-12, 
     return x1
 end
 
-function ode_solve(funcs::Function, y0::T, tspan::Tuple{R, R}; 
-    nsteps::Int=100, h::Union{Real, Nothing}=nothing) where {T <: Real, R <: Real}
-    
-    if !isnothing(h)
-        ti, tf, h = promote(tspan..., h)
-        nsteps = ceil(Int, (tf - ti) / h)
-    else
-        ti, tf = tspan
-        h = (tf - ti) / nsteps
-    end
+abstract type ODEProblem end
+
+struct OnedimProblem{T <: Number, R <: Real} <: ODEProblem
+    func::Function
+    y0::T
+    ts::LinRange{R}
+    dt::R
+end
+
+struct MultidimProblem{T <: Number, R <: Real} <: ODEProblem
+    func::Function
+    y0::AbstractVector{T}
+    ts::LinRange{R}
+    dt::R
+end
+
+struct SecondOrderProblem{T <: Number, R <: Real} <: ODEProblem
+    func::Function
+    y0::T
+    dy0::T
+    ts::LinRange{R}
+    dt::R
+end
+
+function ODEProblem(func::Function, y0::T, tspan::Tuple{R, R}, nsteps::Int=100) where {T <: Number, R <: Real}
+    dt = (tf - ti) / nsteps
+    ts = LinRange{R}(tspan..., nsteps + 1)
+    OnedimProblem{T, R}(func, y0, ts, dt)
+end
+function ODEProblem(func::Function, y0::T, tspan::Tuple{R, R}, dt::AbstractFloat) where {T <: Number, R <: Real}
+    nsteps = ceil(Int, (tspan[2] - tspan[1]) / dt)
+    ts = LinRange{R}(tspan..., nsteps + 1)
+    OnedimProblem{T, R}(func, y0, ts, dt)
+end
+
+
+
+function ode_solve(prob::OnedimProblem{T, R}) where {T <: Number, R <: Real}
+    h = prob.dt
     h_half = h / 2
 
     results = Vector{T}(undef, nsteps + 1)
-    t, y = ti, y0
+    t, y = prob.ts[1], prob.y0
     results[1] = y
 
+    ks = Vector{T}(undef, 4)
     for i in 1:nsteps
         if t + h > tf
             h = tf - t
             h_half = h / 2
         end
-        k1 = funcs(t, y)
-        k2 = funcs(t + h_half, y + h_half * k1)
-        k3 = funcs(t + h_half, y + h_half * k2)
-        k4 = funcs(t + h, y + h * k3)
+        ks[1] = prob.func(t, y)
+        ks[2] = prob.func(t + h_half, y + h_half * ks[1])
+        ks[3] = prob.func(t + h_half, y + h_half * ks[2])
+        ks[4] = prob.func(t + h, y + h * ks[3])
 
-        y += (h / 6) * (k1 + 2 * k2 + 2 * k3 + k4)
+        y += (h / 6) * (ks[1] + 2 * ks[2] + 2 * ks[3] + ks[4])
         t += h
         results[i + 1] = y
     end
