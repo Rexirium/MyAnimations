@@ -5,11 +5,15 @@ using FastGaussQuadrature: gausslegendre, gausshermite, gausslaguerre, gaussjaco
 export Chebyshev, ChebyshevT, ChebyshevU, ChebyshevV, ChebyshevW
 export LegendreP, HermiteH, LaguerreL, JacobiP
 export Filon, FilonCis, FilonCos, FilonSin
-export integrate
+export Trapezoid, SimpsonRule, integrate
 
 abstract type AbstractQuadrature end
+
 abstract type Chebyshev <: AbstractQuadrature end
 abstract type Filon <: AbstractQuadrature end
+
+struct Trapezoid <: AbstractQuadrature num::Int end
+struct SimpsonRule <: AbstractQuadrature num::Int end
 
 struct ChebyshevT <: Chebyshev order::Int end
 struct ChebyshevU <: Chebyshev order::Int end
@@ -62,6 +66,30 @@ function chebyshev(cheby::ChebyshevW, i::Int)
     xi = cospi((2i) / nodd)
     wfi = cot(π * i / nodd)
     return wfi, xi, 2π * (1 - xi) / nodd
+end
+
+function integrate(integrand::Function, trap::Trapezoid, args...; a::Real=-1.0, b::Real=1.0)
+    h = (b - a) / trap.num
+    total = 0.5 * (integrand(a, args...) + integrand(b, args...))
+    xi = a + h
+    for _ in 1 : trap.num - 1
+        total += integrand(xi, args...)
+        xi += h
+    end
+    return h * total
+end
+
+function integrate(integrand::Function, simp::SimpsonRule, args...; a::Real=-1.0, b::Real=1.0)
+    n = 2simp.num
+    h = (b - a) / n
+    total = integrand(a, args...) + integrand(b, args...)
+    xi = a + h
+    for i in 1 : n - 1
+        wt = isodd(i) ? 4 : 2
+        total += wt * integrand(xi, args...)
+        xi += h
+    end
+    return h/3 * total
 end
 
 function integrate(integrand::Function, cheby::Chebyshev, args...; a::Real=-1.0, b::Real=1.0)

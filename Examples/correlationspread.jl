@@ -18,7 +18,7 @@ let
 
     F2s = Vector{Float64}(undef, nx)
     for (i, x) in enumerate(xs)
-        F2s[i] = abs2(integrate(gg, FilonCis(500, -x), -x, 20.0; a=-π, b=π) / 2π)
+        F2s[i] = abs2(integrate(ff, FilonCis(200, x), x; a=-π, b=π) / 2π)
     end
     lines(xs, F2s)
 end
