@@ -67,7 +67,7 @@ let
     arrows2d!(ax, point_loc, velocity_vec, color=:green)
 
     new_traj = Vector{Point2f}(undef, spf)
-    record(fig, "Examples/videos/hypotrochoid.mp4", 0:nframes; framerate=fps) do i
+    record(fig, "Examples/videos/hypotrochoid.gif", 0:nframes; framerate=fps) do i
         idx[] = min(i * spf + 1, nsteps + 1)
     end
 
