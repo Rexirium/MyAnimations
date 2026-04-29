@@ -181,9 +181,17 @@ function integrate(integrand::Function, jcb::JacobiP, args...; a::Real=-1.0, b::
 end
 
 function make_filon_coeff(θ::Float64)
-    alpha = (θ*θ + θ/2 * sin(2θ) + cos(2θ) - 1) / θ^3
-    beta = (θ*(3 + cos(2θ)) - 2 * sin(2θ)) / θ^3
-    gamma = 4 * (sin(θ) - θ*cos(θ)) / θ^3
+    θ3 = θ^3
+    θ2 = θ^2
+    if abs(θ) > 1/6
+        alpha = (θ*θ + θ/2 * sin(2θ) + cos(2θ) - 1) / θ3
+        beta = (θ*(3 + cos(2θ)) - 2 * sin(2θ)) / θ3
+        gamma = 4 * (sin(θ) - θ*cos(θ)) / θ3
+    else
+        alpha = θ3 * evalpoly(θ2, (2/45, - 2/315, 2/4725))
+        beta = evalpoly(θ2, (2/3, 2/15, -4/105, 2/567))
+        gamma = evalpoly(θ2, (4/3, -2/15, 1/210, -1/11340))
+    end
     return alpha, beta, gamma
 end
 
