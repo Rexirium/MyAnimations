@@ -1,6 +1,6 @@
 using Revise
 if !isdefined(Main, :ODESolver)
-    include("../src/ODE_Solver/ODESolver.jl")
+    include("../src/ODESolver.jl")
     using .ODESolver
 end
 if !isdefined(Main, :Integral)

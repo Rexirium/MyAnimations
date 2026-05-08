@@ -1,7 +1,7 @@
 using Revise
 using GLMakie
 if !isdefined(Main, :ODESolver)
-    include("../src/ODE_Solver/ODESolver.jl")
+    include("../src/ODESolver.jl")
     using .ODESolver
 end
 
