@@ -34,8 +34,9 @@ let
 
     initial = zeros(4)
     initial[3] = -v0
-    tspan = (0.0, final_time)
-    results = ode_solve(equation, initial, tspan; nsteps=nsteps)
+
+    prob = MultidimProblem(equation, initial, (0.0, final_time), nsteps)
+    results = ode_solve(prob)
 
     xs = results[1, :]
     ys = results[2, :]

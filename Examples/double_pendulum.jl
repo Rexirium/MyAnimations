@@ -35,7 +35,8 @@ let
         return [dθ1, dω1, dθ2, dω2]
     end
 
-    results = ode_solve(equations, initial_state, tspan; h=h)
+    prob = MultidimProblem(equations, initial_state, tspan, h)
+    results = ode_solve(prob)
     ts = tspan[1] : h : tspan[2]
     if ts[end] < tspan[2]
         push!(ts, tspan[2])

@@ -1,5 +1,6 @@
 module ODESolver
 
+export ODE_Problem, OnedimProblem, MultidimProblem, SecondOrderProblem
 export ode_solve, quasi_newton
 
 function quasi_newton(func::Function, xini::Tuple{T, T}; tol=1e-14, xtol=1e-12,  maxiter::Int=100) where T <: Real
@@ -19,23 +20,23 @@ function quasi_newton(func::Function, xini::Tuple{T, T}; tol=1e-14, xtol=1e-12, 
     return x1
 end
 
-abstract type ODEProblem end
+abstract type ODE_Problem end
 
-struct OnedimProblem{T <: Number, R <: Real} <: ODEProblem
+struct OnedimProblem{T <: Number, R <: Real} <: ODE_Problem
     func::Function
     y0::T
     ts::LinRange{R}
     dt::R
 end
 
-struct MultidimProblem{T <: Number, R <: Real} <: ODEProblem
+struct MultidimProblem{T <: Number, R <: Real} <: ODE_Problem
     func::Function
-    y0::AbstractVector{T}
+    y0::Vector{T}
     ts::LinRange{R}
     dt::R
 end
 
-struct SecondOrderProblem{T <: Number, R <: Real} <: ODEProblem
+struct SecondOrderProblem{T <: Number, R <: Real} <: ODE_Problem
     func::Function
     y0::T
     dy0::T
@@ -43,60 +44,69 @@ struct SecondOrderProblem{T <: Number, R <: Real} <: ODEProblem
     dt::R
 end
 
-function ODEProblem(func::Function, y0::T, tspan::Tuple{R, R}, nsteps::Int=100) where {T <: Number, R <: Real}
-    dt = (tf - ti) / nsteps
-    ts = LinRange{R}(tspan..., nsteps + 1)
+function OnedimProblem(func::Function, y0::T, tspan::Tuple{R, R}, nsteps::Int=100) where {T <: Number, R <: Real}
+    dt = (tspan[2] - tspan[1]) / (nsteps - 1)
+    ts = LinRange{R}(tspan..., nsteps)
     OnedimProblem{T, R}(func, y0, ts, dt)
 end
-function ODEProblem(func::Function, y0::T, tspan::Tuple{R, R}, dt::AbstractFloat) where {T <: Number, R <: Real}
-    nsteps = ceil(Int, (tspan[2] - tspan[1]) / dt)
-    ts = LinRange{R}(tspan..., nsteps + 1)
+function OnedimProblem(func::Function, y0::T, tspan::Tuple{R, R}, dt::AbstractFloat) where {T <: Number, R <: Real}
+    nsteps = floor(Int, (tspan[2] - tspan[1]) / dt) + 1
+    ts = LinRange{R}(tspan..., nsteps)
     OnedimProblem{T, R}(func, y0, ts, dt)
 end
 
+function MultidimProblem(func::Function, y0::Vector{T}, tspan::Tuple{R, R}, nsteps::Int=100) where {T<:Number, R<:Real}
+    dt = (tspan[2] - tspan[1]) / (nsteps - 1)
+    ts = LinRange{R}(tspan..., nsteps)
+    MultidimProblem{T, R}(func, y0, ts, dt)
+end
+function MultidimProblem(func::Function, y0::Vector{T}, tspan::Tuple{R, R}, dt::AbstractFloat) where {T<:Number, R<:Real}
+    nsteps = floor(Int, (tspan[2] - tspan[1]) / dt) + 1
+    ts = LinRange{R}(tspan..., nsteps)
+    MultidimProblem(func, y0, ts, dt)
+end
+
+function SecondOrderProblem(func::Function, y0::T, dy0::T, tspan::Tuple{R,R}, nsteps::Int=100) where {T<:Number, R<:Real}
+    dt = (tspan[2] - tspan[1]) / (nsteps - 1)
+    ts = LinRange{R}(tspan..., nsteps)
+    SecondOrderProblem{T, R}(func, y0, dy0, ts, dt)
+end
+function SecondOrderProblem(func::Function, y0::T, dy0::T, tspan::Tuple{R,R}, dt::AbstractFloat) where {T<:Number, R<:Real}
+    nsteps = floor(Int, (tspan[2] - tspan[1]) / dt) + 1
+    ts = LinRange{R}(tspan..., nsteps)
+    SecondOrderProblem{T, R}(func, y0, dy0, ts, dt)
+end
 
 
 function ode_solve(prob::OnedimProblem{T, R}) where {T <: Number, R <: Real}
     h = prob.dt
+    func = prob.func
     h_half = h / 2
 
-    results = Vector{T}(undef, nsteps + 1)
-    t, y = prob.ts[1], prob.y0
-    results[1] = y
+    results = Vector{T}(undef, length(prob.ts))
+    y = prob.y0
 
     ks = Vector{T}(undef, 4)
-    for i in 1:nsteps
-        if t + h > tf
-            h = tf - t
-            h_half = h / 2
-        end
-        ks[1] = prob.func(t, y)
-        ks[2] = prob.func(t + h_half, y + h_half * ks[1])
-        ks[3] = prob.func(t + h_half, y + h_half * ks[2])
-        ks[4] = prob.func(t + h, y + h * ks[3])
+    for (i, t) in enumerate(prob.ts)
+        results[i] = y
+
+        ks[1] = func(t, y)
+        ks[2] = func(t + h_half, y + h_half * ks[1])
+        ks[3] = func(t + h_half, y + h_half * ks[2])
+        ks[4] = func(t + h, y + h * ks[3])
 
         y += (h / 6) * (ks[1] + 2 * ks[2] + 2 * ks[3] + ks[4])
-        t += h
-        results[i + 1] = y
     end
     return results
 end
 
-function ode_solve(funcs::Function, y0::AbstractVector{T}, tspan::Tuple{R, R};
-    nsteps::Int=100, h::Union{Real, Nothing}=nothing) where {T <: Number, R <: Real}
-    if !isnothing(h)
-        ti, tf, h = promote(tspan..., h)
-        nsteps = ceil(Int, (tf - ti) / h)
-    else
-        ti, tf = tspan
-        h = (tf - ti) / nsteps
-    end
+function ode_solve(prob::MultidimProblem{T, R}) where {T <: Number, R <: Real}
+    h = prob.dt
+    funcs = prob.func
     h_half = h / 2
 
-    results = Matrix{T}(undef, length(y0), nsteps + 1)
-    ys = copy(y0)
-    results[:, 1] .= ys
-    t = ti
+    results = Matrix{T}(undef, length(prob.y0), length(prob.ts))
+    ys = copy(prob.y0)
 
     k1 = similar(ys)
     k2 = similar(ys)
@@ -104,11 +114,8 @@ function ode_solve(funcs::Function, y0::AbstractVector{T}, tspan::Tuple{R, R};
     k4 = similar(ys)
     temp = similar(ys)
 
-    for i in 1:nsteps
-        if t + h > tf
-            h = tf - t
-            h_half = h / 2
-        end
+    for (i, t) in enumerate(prob.ts)
+        results[:, i] .= ys
 
         k1 .= funcs(t, ys)
         temp = ys + h_half * k1
@@ -118,52 +125,41 @@ function ode_solve(funcs::Function, y0::AbstractVector{T}, tspan::Tuple{R, R};
         temp = ys + h * k3
         k4 .= funcs(t + h, temp)
 
-        ys += (h/6) * (k1 + 2*k2 + 2*k3 + k4)
-        t += h
-        results[:, i + 1] .= ys
+        ys += (h/6) * (k1 + 2 * k2 + 2 * k3 + k4)
     end
     return results
 end
 
-function ode_solve(func::Function, y0::T, dy0::T, tspan::Tuple{R, R}; 
-    nsteps::Int=100, h::Union{Real, Nothing}=nothing) where {T <: Number, R <: Real}
-    if !isnothing(h)
-        ti, tf, h = promote(tspan..., h)
-        nsteps = ceil(Int, (tf - ti) / h)
-    else
-        ti, tf = tspan
-        h = (tf - ti) / nsteps
-    end
+function ode_solve(prob::SecondOrderProblem{T, R}) where {T <: Number, R <: Real}
+    h = prob.dt
+    func = prob.func
     h_half = h / 2
 
-    var_results = Vector{T}(undef, nsteps + 1)
-    deriv_results = Vector{T}(undef, nsteps + 1)
-    y, dy = y0, dy0
-    var_results[1] = y
-    deriv_results[1] = dy
-    t = ti
+    nsteps = length(prob.ts)
+    var_results = Vector{T}(undef, nsteps)
+    deriv_results = Vector{T}(undef, nsteps)
 
-    for i in 1:nsteps
-        if t + h > tf
-            h = tf - t
-            h_half = h / 2
-        end
+    y, dy = prob.y0, prob.dy0
 
-        k1y = dy
-        k1dy = func(t, y, dy)
-        k2y = dy + h_half * k1dy
-        k2dy = func(t + h_half, y + h_half * k1y, dy + h_half * k1dy)
-        k3y = dy + h_half * k2dy
-        k3dy = func(t + h_half, y + h_half * k2y, dy + h_half * k2dy)
-        k4y = dy + h * k3dy
-        k4dy = func(t + h, y + h * k3y, dy + h * k3dy)
+    ks = Vector{T}(undef, 4)
+    kds = Vector{T}(undef, 4)
+    for (i, t) in enumerate(prob.ts)
+        var_results[i] = y
+        deriv_results[i] = dy
 
-        y += (h/6) * (k1y + 2*k2y + 2*k3y + k4y)
-        dy += (h/6) * (k1dy + 2*k2dy + 2*k3dy + k4dy)
-        t += h
-        var_results[i + 1] = y
-        deriv_results[i + 1] = dy
+        ks[1] = dy
+        kds[1] = func(t, y, dy)
+        ks[2] = dy + h_half * kds[1]
+        kds[2] = func(t + h_half, y + h_half * ks[1], dy + h_half * kds[1])
+        ks[3] = dy + h_half * kds[2]
+        kds[3] = func(t + h_half, y + h_half * ks[2], dy + h_half * kds[2])
+        ks[4] = dy + h * kds[3]
+        kds[4] = func(t + h, y + h * ks[3], dy + h * kds[3])
+
+        y += (h/6) * (ks[1] + 2*ks[2] + 2*ks[3] + ks[4])
+        dy += (h/6) * (kds[1] + 2*kds[2] + 2*kds[3] + kds[4])
     end
+    
     return var_results, deriv_results
 end
 

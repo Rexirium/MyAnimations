@@ -19,8 +19,8 @@ let
     attractor1 = LorenzAttractor{Float64}(10.0, 28.0, 8/3)
     lorenz = get_ode_function(attractor1)
 
-    tspan = (0.0, final_time)
-    results = ode_solve(lorenz, u0, tspan; h=h)
+    prob = MultidimProblem(lorenz, u0, (0.0, final_time), h)
+    results = ode_solve(prob)
     # ts = tspan[1]:h:tspan[2]
 
     nsteps = size(results, 2)

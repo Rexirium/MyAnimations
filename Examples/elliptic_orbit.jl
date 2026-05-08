@@ -37,8 +37,8 @@ let
     tspan = (0.0, final_time)
 
     ts = range(tspan... , nsteps+1)
-
-    results = ode_solve(equations, initial_state, tspan; nsteps=nsteps)
+    prob = MultidimProblem(equations, initial_state, tspan, nsteps+1)
+    results = ode_solve(prob)
 
     xs = results[1, :] .* cos.(results[2, :])
     ys = results[1, :] .* sin.(results[2, :])
