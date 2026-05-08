@@ -118,14 +118,14 @@ function ode_solve(prob::MultidimProblem{T, R}) where {T <: Number, R <: Real}
         results[:, i] .= ys
 
         k1 .= funcs(t, ys)
-        temp = ys + h_half * k1
+        @. temp = ys + h_half * k1
         k2 .= funcs(t + h_half, temp)
-        temp = ys + h_half * k2
+        @. temp = ys + h_half * k2
         k3 .= funcs(t + h_half, temp)
-        temp = ys + h * k3
+        @. temp = ys + h * k3
         k4 .= funcs(t + h, temp)
 
-        ys += (h/6) * (k1 + 2 * k2 + 2 * k3 + k4)
+        @. ys += (h/6) * (k1 + 2 * k2 + 2 * k3 + k4)
     end
     return results
 end
